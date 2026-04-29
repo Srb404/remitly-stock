@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-exchange}
+      POSTGRES_USER: ${POSTGRES_USER:-exchange}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exchange}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-exchange} -d $${POSTGRES_DB:-exchange}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app1: &app
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-exchange}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-exchange}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-exchange}
+      SERVER_PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app2: *app
+
+  app3: *app
+
+  haproxy:
+    image: haproxy:2.9-alpine
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "${PORT:-8080}:80"
+    depends_on:
+      - app1
+      - app2
+      - app3
+    restart: unless-stopped
