@@ -18,7 +18,7 @@ public class AuditLogService {
 
     @Transactional(readOnly = true)
     public List<AuditLogEntry> listPage(long afterId, int limit) {
-        return auditLogRepository.findByIdGreaterThanOrderByCreatedAtAscIdAsc(
+        return auditLogRepository.findByIdGreaterThanOrderByIdAsc(
                 afterId, PageRequest.ofSize(limit));
     }
 }

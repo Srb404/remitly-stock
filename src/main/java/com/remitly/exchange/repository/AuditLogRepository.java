@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AuditLogRepository extends JpaRepository<AuditLogEntry, Long> {
 
-    List<AuditLogEntry> findByIdGreaterThanOrderByCreatedAtAscIdAsc(long afterId, Pageable pageable);
+    List<AuditLogEntry> findByIdGreaterThanOrderByIdAsc(long afterId, Pageable pageable);
 }
