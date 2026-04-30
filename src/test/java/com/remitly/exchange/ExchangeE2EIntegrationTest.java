@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.remitly.exchange.domain.BankStock;
 import com.remitly.exchange.domain.OperationType;
 import com.remitly.exchange.dto.AuditLogEntryDto;
+import com.remitly.exchange.dto.BankStockDto;
 import com.remitly.exchange.dto.ErrorResponse;
+import com.remitly.exchange.dto.SetBankRequest;
 import com.remitly.exchange.dto.TradeRequest;
 import com.remitly.exchange.dto.WalletStockDto;
 import com.remitly.exchange.repository.AuditLogRepository;
@@ -71,6 +73,37 @@ class ExchangeE2EIntegrationTest {
                 new HttpEntity<>(new TradeRequest(OperationType.BUY)), ErrorResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody().error()).isEqualTo("stock_not_found");
+    }
+
+    @Test
+    void postStocks_replacesBankInventory() {
+        seed(new BankStock("OLD", 7));
+
+        ResponseEntity<List<BankStockDto>> response = restTemplate.exchange(
+                "/stocks", HttpMethod.POST,
+                new HttpEntity<>(new SetBankRequest(List.of(
+                        new BankStockDto("AAPL", 10),
+                        new BankStockDto("MSFT", 5)))),
+                new ParameterizedTypeReference<>() {});
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .extracting(BankStockDto::name)
+                .containsExactlyInAnyOrder("AAPL", "MSFT");
+        assertThat(bankStockRepository.findById("OLD")).isEmpty();
+        assertThat(bankStockRepository.findById("AAPL").orElseThrow().getQuantity()).isEqualTo(10);
+    }
+
+    @Test
+    void postStocks_negativeQuantity_returns400() {
+        ResponseEntity<ErrorResponse> response = restTemplate.exchange(
+                "/stocks", HttpMethod.POST,
+                new HttpEntity<>(new SetBankRequest(List.of(
+                        new BankStockDto("AAPL", -1)))),
+                ErrorResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().error()).isEqualTo("validation_failed");
     }
 
     private void seed(BankStock... stocks) {
