@@ -27,11 +27,12 @@ All endpoints accept and return JSON. Errors: `{"error": "slug", "message": "hum
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET`  | `/stocks` | Bank inventory. |
-| `GET`  | `/wallets/{wallet_id}` | Stocks held by a wallet. |
-| `GET`  | `/wallets/{wallet_id}/stocks/{stock_name}` | Quantity of a single stock. `404` if never held. |
-| `POST` | `/wallets/{wallet_id}/stocks/{stock_name}` | Buy or sell one unit. Body: `{"type":"buy"\|"sell"}`. Returns wallet state for that stock. |
-| `GET`  | `/log` | Audit log, oldest first. Cursor-paginated: `?afterId=<id>&limit=<1..1000>` (defaults `0`, `100`). |
+| `GET`  | `/stocks` | Bank inventory: `{"stocks":[{"name":...,"quantity":...}]}`. |
+| `POST` | `/stocks` | Replace bank inventory. Body: `{"stocks":[{"name":...,"quantity":...}]}`. |
+| `GET`  | `/wallets/{wallet_id}` | Wallet state: `{"id":"...","stocks":[{"name":...,"quantity":...}]}`. |
+| `GET`  | `/wallets/{wallet_id}/stocks/{stock_name}` | Plain integer quantity. `404` if the bank has no such stock. |
+| `POST` | `/wallets/{wallet_id}/stocks/{stock_name}` | Buy or sell one unit. Body: `{"type":"buy"\|"sell"}`. |
+| `GET`  | `/log` | Full audit log, oldest first: `{"log":[{"type":...,"wallet_id":...,"stock_name":...}]}`. |
 | `POST` | `/chaos` | Kill the serving instance (HA demo). Returns `202 Accepted`. |
 
 ### Error codes
@@ -45,26 +46,30 @@ All endpoints accept and return JSON. Errors: `{"error": "slug", "message": "hum
 
 ### Examples
 
-Bank inventory is seeded by Flyway on first boot (`AAPL`, `MSFT`, `GOOG`, `AMZN`, `NVDA` - 100 units each). Trading is the only write path - there is no hot-replace endpoint, which keeps the pessimistic-lock protocol race-safe. Edit `V3__seed_bank_inventory.sql` to change the starting catalogue.
+The bank starts empty. Seed it with `POST /stocks` before any trading.
 
 ```bash
-# List the bank
-curl http://localhost:8080/stocks
+# Seed the bank
+curl -X POST http://localhost:8080/stocks \
+     -H 'Content-Type: application/json' \
+     -d '{"stocks":[{"name":"AAPL","quantity":100},{"name":"MSFT","quantity":50}]}'
 
 # Buy one AAPL for wallet "w1"
 curl -X POST http://localhost:8080/wallets/w1/stocks/AAPL \
      -H 'Content-Type: application/json' \
      -d '{"type":"buy"}'
-# => {"walletId":"w1","stockName":"AAPL","quantity":1}
 
-# Read the wallet and the log
+# Read the wallet, a single stock quantity, and the log
 curl http://localhost:8080/wallets/w1
+curl http://localhost:8080/wallets/w1/stocks/AAPL   # => 1
 curl http://localhost:8080/log
 
 # Kill the serving instance and watch HAProxy route around it
 curl -X POST http://localhost:8080/chaos
 curl http://localhost:8080/wallets/w1   # still answers, served by a surviving replica
 ```
+
+`POST /stocks` takes a brief `EXCLUSIVE` table lock on `bank_stocks`, so it serialises against in-flight trades — readers are unaffected, but trades wait until the replace commits.
 
 ## Architecture
 
@@ -107,7 +112,7 @@ Each trade is one transaction: bank row locked first (`SELECT ... FOR UPDATE`), 
     │   └── service/         # BankService, WalletService, TradingService, AuditLogService
     └── main/resources/
         ├── application.properties
-        └── db/migration/    # Flyway - V1 schema, V2 audit timestamp, V3 seed data
+        └── db/migration/    # Flyway - V1 schema, V2 audit timestamp, V3 seed (cleared by V4), V4 clear
 ```
 
 ## Development
