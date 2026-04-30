@@ -1,5 +1,6 @@
 package com.remitly.exchange.controller;
 
+import com.remitly.exchange.dto.BankResponse;
 import com.remitly.exchange.dto.BankStockDto;
 import com.remitly.exchange.dto.SetBankRequest;
 import com.remitly.exchange.service.BankService;
@@ -24,15 +25,19 @@ public class BankController {
     }
 
     @GetMapping
-    public List<BankStockDto> list() {
-        return bankService.listAll().stream().map(BankStockDto::from).toList();
+    public BankResponse list() {
+        List<BankStockDto> stocks = bankService.listAll().stream()
+                .map(BankStockDto::from)
+                .toList();
+        return new BankResponse(stocks);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<BankStockDto> set(@Valid @RequestBody SetBankRequest request) {
-        return bankService.replaceAll(request.stocks()).stream()
+    public BankResponse set(@Valid @RequestBody SetBankRequest request) {
+        List<BankStockDto> stocks = bankService.replaceAll(request.stocks()).stream()
                 .map(BankStockDto::from)
                 .toList();
+        return new BankResponse(stocks);
     }
 }

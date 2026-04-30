@@ -44,9 +44,10 @@ class WalletControllerTest {
 
         mockMvc.perform(get("/wallets/w1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].stockName").value("AAPL"))
-                .andExpect(jsonPath("$[0].quantity").value(3));
+                .andExpect(jsonPath("$.id").value("w1"))
+                .andExpect(jsonPath("$.stocks", hasSize(1)))
+                .andExpect(jsonPath("$.stocks[0].name").value("AAPL"))
+                .andExpect(jsonPath("$.stocks[0].quantity").value(3));
     }
 
     @Test

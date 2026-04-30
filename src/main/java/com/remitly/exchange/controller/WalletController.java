@@ -2,7 +2,9 @@ package com.remitly.exchange.controller;
 
 import com.remitly.exchange.domain.OperationType;
 import com.remitly.exchange.dto.TradeRequest;
+import com.remitly.exchange.dto.WalletResponse;
 import com.remitly.exchange.dto.WalletStockDto;
+import com.remitly.exchange.dto.WalletStockEntryDto;
 import com.remitly.exchange.exception.StockNotFoundException;
 import com.remitly.exchange.service.TradingService;
 import com.remitly.exchange.service.WalletService;
@@ -30,8 +32,11 @@ public class WalletController {
     }
 
     @GetMapping("/{walletId}")
-    public List<WalletStockDto> get(@PathVariable String walletId) {
-        return walletService.listByWallet(walletId).stream().map(WalletStockDto::from).toList();
+    public WalletResponse get(@PathVariable String walletId) {
+        List<WalletStockEntryDto> stocks = walletService.listByWallet(walletId).stream()
+                .map(WalletStockEntryDto::from)
+                .toList();
+        return new WalletResponse(walletId, stocks);
     }
 
     @GetMapping("/{walletId}/stocks/{stockName}")

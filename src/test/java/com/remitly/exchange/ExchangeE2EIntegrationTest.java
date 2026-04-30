@@ -4,7 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.remitly.exchange.domain.BankStock;
 import com.remitly.exchange.domain.OperationType;
-import com.remitly.exchange.dto.AuditLogEntryDto;
+import com.remitly.exchange.dto.AuditLogResponse;
+import com.remitly.exchange.dto.BankResponse;
 import com.remitly.exchange.dto.BankStockDto;
 import com.remitly.exchange.dto.ErrorResponse;
 import com.remitly.exchange.dto.SetBankRequest;
@@ -21,7 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -58,10 +58,10 @@ class ExchangeE2EIntegrationTest {
         assertThat(sell.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(sell.getBody().quantity()).isEqualTo(1);
 
-        ResponseEntity<List<AuditLogEntryDto>> log = restTemplate.exchange(
-                "/log", HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
-        assertThat(log.getBody())
-                .extracting(AuditLogEntryDto::type)
+        ResponseEntity<AuditLogResponse> log = restTemplate.getForEntity(
+                "/log", AuditLogResponse.class);
+        assertThat(log.getBody().log())
+                .extracting(entry -> entry.type())
                 .containsExactly(OperationType.BUY, OperationType.BUY, OperationType.SELL);
     }
 
@@ -79,15 +79,15 @@ class ExchangeE2EIntegrationTest {
     void postStocks_replacesBankInventory() {
         seed(new BankStock("OLD", 7));
 
-        ResponseEntity<List<BankStockDto>> response = restTemplate.exchange(
+        ResponseEntity<BankResponse> response = restTemplate.exchange(
                 "/stocks", HttpMethod.POST,
                 new HttpEntity<>(new SetBankRequest(List.of(
                         new BankStockDto("AAPL", 10),
                         new BankStockDto("MSFT", 5)))),
-                new ParameterizedTypeReference<>() {});
+                BankResponse.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody())
+        assertThat(response.getBody().stocks())
                 .extracting(BankStockDto::name)
                 .containsExactlyInAnyOrder("AAPL", "MSFT");
         assertThat(bankStockRepository.findById("OLD")).isEmpty();

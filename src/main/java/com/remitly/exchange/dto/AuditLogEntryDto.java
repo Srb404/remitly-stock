@@ -1,22 +1,18 @@
 package com.remitly.exchange.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.remitly.exchange.domain.AuditLogEntry;
 import com.remitly.exchange.domain.OperationType;
-import java.time.OffsetDateTime;
 
 public record AuditLogEntryDto(
-        Long id,
         OperationType type,
-        String walletId,
-        String stockName,
-        OffsetDateTime createdAt) {
+        @JsonProperty("wallet_id") String walletId,
+        @JsonProperty("stock_name") String stockName) {
 
     public static AuditLogEntryDto from(AuditLogEntry entity) {
         return new AuditLogEntryDto(
-                entity.getId(),
                 entity.getType(),
                 entity.getWalletId(),
-                entity.getStockName(),
-                entity.getCreatedAt());
+                entity.getStockName());
     }
 }

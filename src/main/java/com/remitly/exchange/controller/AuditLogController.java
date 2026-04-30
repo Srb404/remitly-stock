@@ -1,6 +1,7 @@
 package com.remitly.exchange.controller;
 
 import com.remitly.exchange.dto.AuditLogEntryDto;
+import com.remitly.exchange.dto.AuditLogResponse;
 import com.remitly.exchange.service.AuditLogService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -26,12 +27,13 @@ public class AuditLogController {
     }
 
     @GetMapping
-    public List<AuditLogEntryDto> list(
+    public AuditLogResponse list(
             @RequestParam(name = "afterId", defaultValue = "0") @Min(0) long afterId,
             @RequestParam(name = "limit", defaultValue = "" + DEFAULT_LIMIT)
             @Min(1) @Max(MAX_LIMIT) int limit) {
-        return auditLogService.listPage(afterId, limit).stream()
+        List<AuditLogEntryDto> entries = auditLogService.listPage(afterId, limit).stream()
                 .map(AuditLogEntryDto::from)
                 .toList();
+        return new AuditLogResponse(entries);
     }
 }
