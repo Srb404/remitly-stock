@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,6 +14,7 @@ import com.remitly.exchange.domain.WalletStock;
 import com.remitly.exchange.dto.WalletStockDto;
 import com.remitly.exchange.exception.GlobalExceptionHandler;
 import com.remitly.exchange.exception.InsufficientStockException;
+import com.remitly.exchange.service.BankService;
 import com.remitly.exchange.service.TradingService;
 import com.remitly.exchange.service.WalletService;
 import java.util.List;
@@ -36,6 +38,9 @@ class WalletControllerTest {
 
     @MockitoBean
     private TradingService tradingService;
+
+    @MockitoBean
+    private BankService bankService;
 
     @Test
     void getWallet_returnsStocks() throws Exception {
@@ -74,6 +79,36 @@ class WalletControllerTest {
                         .content("{\"type\":\"sell\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("insufficient_stock"));
+    }
+
+    @Test
+    void getWalletStock_returnsPlainNumber() throws Exception {
+        when(bankService.exists("AAPL")).thenReturn(true);
+        when(walletService.findOne("w1", "AAPL"))
+                .thenReturn(java.util.Optional.of(new WalletStock("w1", "AAPL", 99)));
+
+        mockMvc.perform(get("/wallets/w1/stocks/AAPL"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("99"));
+    }
+
+    @Test
+    void getWalletStock_walletEmpty_returnsZero() throws Exception {
+        when(bankService.exists("AAPL")).thenReturn(true);
+        when(walletService.findOne("w1", "AAPL")).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/wallets/w1/stocks/AAPL"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("0"));
+    }
+
+    @Test
+    void getWalletStock_unknownStock_returns404() throws Exception {
+        when(bankService.exists("ZZZ")).thenReturn(false);
+
+        mockMvc.perform(get("/wallets/w1/stocks/ZZZ"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("stock_not_found"));
     }
 
     @Test

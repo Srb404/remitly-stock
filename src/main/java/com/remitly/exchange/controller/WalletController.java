@@ -1,11 +1,13 @@
 package com.remitly.exchange.controller;
 
 import com.remitly.exchange.domain.OperationType;
+import com.remitly.exchange.domain.WalletStock;
 import com.remitly.exchange.dto.TradeRequest;
 import com.remitly.exchange.dto.WalletResponse;
 import com.remitly.exchange.dto.WalletStockDto;
 import com.remitly.exchange.dto.WalletStockEntryDto;
 import com.remitly.exchange.exception.StockNotFoundException;
+import com.remitly.exchange.service.BankService;
 import com.remitly.exchange.service.TradingService;
 import com.remitly.exchange.service.WalletService;
 import jakarta.validation.Valid;
@@ -25,10 +27,12 @@ public class WalletController {
 
     private final WalletService walletService;
     private final TradingService tradingService;
+    private final BankService bankService;
 
-    public WalletController(WalletService walletService, TradingService tradingService) {
+    public WalletController(WalletService walletService, TradingService tradingService, BankService bankService) {
         this.walletService = walletService;
         this.tradingService = tradingService;
+        this.bankService = bankService;
     }
 
     @GetMapping("/{walletId}")
@@ -40,10 +44,13 @@ public class WalletController {
     }
 
     @GetMapping("/{walletId}/stocks/{stockName}")
-    public WalletStockDto getStock(@PathVariable String walletId, @PathVariable String stockName) {
+    public long getStock(@PathVariable String walletId, @PathVariable String stockName) {
+        if (!bankService.exists(stockName)) {
+            throw new StockNotFoundException(stockName);
+        }
         return walletService.findOne(walletId, stockName)
-                .map(WalletStockDto::from)
-                .orElseThrow(() -> new StockNotFoundException(stockName));
+                .map(WalletStock::getQuantity)
+                .orElse(0L);
     }
 
     @PostMapping("/{walletId}/stocks/{stockName}")

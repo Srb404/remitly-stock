@@ -24,6 +24,11 @@ public class BankService {
         return bankStockRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public boolean exists(String stockName) {
+        return bankStockRepository.existsById(stockName);
+    }
+
     @Transactional
     public List<BankStock> replaceAll(List<BankStockDto> desired) {
         bankStockRepository.lockTableExclusive();
