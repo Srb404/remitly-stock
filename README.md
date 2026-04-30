@@ -112,7 +112,7 @@ Each trade is one transaction: bank row locked first (`SELECT ... FOR UPDATE`), 
     │   └── service/         # BankService, WalletService, TradingService, AuditLogService
     └── main/resources/
         ├── application.properties
-        └── db/migration/    # Flyway - V1 schema, V2 audit timestamp, V3 seed (cleared by V4), V4 clear
+        └── db/migration/    # Flyway - V1 schema, V2 audit timestamp
 ```
 
 ## Development
