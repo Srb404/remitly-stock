@@ -18,6 +18,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("stock_not_found", ex.getMessage()));
     }
 
+    @ExceptionHandler(WalletNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWalletNotFound(WalletNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("wallet_not_found", ex.getMessage()));
+    }
+
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<ErrorResponse> handleInsufficient(InsufficientStockException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

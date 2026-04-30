@@ -66,6 +66,17 @@ class ExchangeE2EIntegrationTest {
     }
 
     @Test
+    void getWallet_neverTraded_returns404() {
+        seed(new BankStock("AAPL", 1));
+
+        ResponseEntity<ErrorResponse> response = restTemplate.getForEntity(
+                "/wallets/ghost", ErrorResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().error()).isEqualTo("wallet_not_found");
+    }
+
+    @Test
     void buy_unknownStock_returns404() {
         seed(new BankStock("AAPL", 1));
         ResponseEntity<ErrorResponse> response = restTemplate.exchange(

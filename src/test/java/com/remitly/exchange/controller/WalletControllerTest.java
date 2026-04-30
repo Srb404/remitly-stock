@@ -82,6 +82,15 @@ class WalletControllerTest {
     }
 
     @Test
+    void getWallet_unknownWallet_returns404() throws Exception {
+        when(walletService.listByWallet("ghost")).thenReturn(List.of());
+
+        mockMvc.perform(get("/wallets/ghost"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("wallet_not_found"));
+    }
+
+    @Test
     void getWalletStock_returnsPlainNumber() throws Exception {
         when(bankService.exists("AAPL")).thenReturn(true);
         when(walletService.findOne("w1", "AAPL"))
