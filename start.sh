@@ -10,4 +10,4 @@ fi
 
 export PORT
 
-exec docker compose up --build --remove-orphan
+exec docker compose up --build --remove-orphans
